@@ -1,27 +1,44 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Plug } from 'lucide-react'
+import { LogTradeButton } from '@/components/trades/log-trade-button'
+import { cn } from '@/lib/utils'
+import { formatShortDate } from '@/lib/utils'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/login')
 
-  const [profileResult, countResult] = await Promise.all([
+  const [profileResult, tradesResult, recentTradesResult] = await Promise.all([
     supabase.from('users').select('full_name').eq('id', user.id).single(),
-    supabase.from('trades').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('trades').select('pnl, status, close_price').eq('user_id', user.id),
+    supabase.from('trades')
+      .select('id, symbol, type, open_price, close_price, pnl, open_time, status')
+      .eq('user_id', user.id)
+      .order('open_time', { ascending: false })
+      .limit(5),
   ])
 
   const firstName = profileResult.data?.full_name?.split(' ')[0] ?? 'there'
-  const tradeCount = countResult.count ?? 0
+  const trades = tradesResult.data ?? []
+  const closedTrades = trades.filter(t => t.status === 'closed' || t.close_price != null)
+  const tradeCount = trades.length
   const hasTrades = tradeCount > 0
 
+  // Calculate win rate and net P&L
+  const winningTrades = closedTrades.filter(t => (t.pnl ?? 0) > 0)
+  const winRate = closedTrades.length > 0 ? Math.round((winningTrades.length / closedTrades.length) * 100) : 0
+  const netPnl = closedTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0)
+
+  const recentTrades = recentTradesResult.data ?? []
+
   const stats = [
-    { label: 'Total Trades', display: String(tradeCount) },
-    { label: 'Win Rate',     display: '0%' },
-    { label: 'Net P\u0026L (\u20B9)', display: '\u20B9\u20090.00' },
+    { label: 'Total Trades', display: String(tradeCount), color: 'text-anchor' },
+    { label: 'Win Rate', display: `${winRate}%`, color: 'text-anchor' },
+    { label: 'Net P\u0026L (\u20B9)', display: `₹${netPnl.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: netPnl > 0 ? 'text-emerald-600' : netPnl < 0 ? 'text-red-500' : 'text-anchor' },
   ]
 
   return (
@@ -34,10 +51,10 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {stats.map(({ label, display }) => (
+        {stats.map(({ label, display, color }) => (
           <div key={label} className="bg-surface border border-border rounded-lg p-6 shadow-sm">
             <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">{label}</p>
-            <p className="mt-2 font-display text-3xl font-medium tabular-nums text-anchor">
+            <p className={cn("mt-2 font-display text-3xl font-medium tabular-nums", color)}>
               {display}
             </p>
           </div>
@@ -72,13 +89,42 @@ export default async function DashboardPage() {
       )}
 
       <div>
-        <h2 className="mb-3 text-sm font-semibold text-anchor">Recent trades</h2>
-        <div className="bg-surface border border-border rounded-lg shadow-sm flex flex-col items-center justify-center gap-2 py-16 text-center px-6">
-          <p className="text-sm font-medium text-anchor">No trades yet</p>
-          <p className="text-sm text-ink-muted">
-            Your trades will appear here once you connect MT5.
-          </p>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-anchor">Recent trades</h2>
+          <LogTradeButton />
         </div>
+        
+        {recentTrades.length === 0 ? (
+          <div className="bg-surface border border-border rounded-lg shadow-sm flex flex-col items-center justify-center gap-3 py-16 text-center px-6">
+            <p className="text-sm font-medium text-anchor">Log your first trade to start tracking your performance.</p>
+            <LogTradeButton />
+          </div>
+        ) : (
+          <div className="bg-surface border border-border rounded-lg shadow-sm divide-y divide-rule">
+            {recentTrades.map((trade) => (
+              <div key={trade.id} className="flex items-center justify-between px-4 py-3 hover:bg-neutral/40 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-sm font-medium text-anchor">{trade.symbol}</span>
+                  <span className={cn(
+                    'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase',
+                    trade.type === 'buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                  )}>
+                    {trade.type}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className={cn(
+                    'font-mono text-sm font-semibold',
+                    (trade.pnl ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                  )}>
+                    {(trade.pnl ?? 0) >= 0 ? '+' : ''}₹{Math.abs(trade.pnl ?? 0).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-ink-muted">{trade.open_time ? formatShortDate(trade.open_time) : '—'}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
