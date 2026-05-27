@@ -133,9 +133,9 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
     
     // Check for violations
     const violationList = await checkViolations(supabase, user.id, {
-      entryPrice,
-      stopLoss: form.stopLoss ? parseFloat(form.stopLoss) : null,
-      takeProfit: form.takeProfit ? parseFloat(form.takeProfit) : null,
+      entry_price: entryPrice,
+      stop_loss: form.stopLoss ? parseFloat(form.stopLoss) : null,
+      take_profit: form.takeProfit ? parseFloat(form.takeProfit) : null,
       side: form.side,
     })
     

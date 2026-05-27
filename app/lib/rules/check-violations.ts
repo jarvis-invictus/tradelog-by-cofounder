@@ -11,10 +11,10 @@ export async function checkViolations(
   supabase: SupabaseClient,
   userId: string,
   newTrade: {
-    pnl?: number | null
-    entryPrice?: number
-    stopLoss?: number | null
-    takeProfit?: number | null
+    pnl_inr?: number | null
+    entry_price?: number
+    stop_loss?: number | null
+    take_profit?: number | null
     side?: string
   }
 ): Promise<Violation[]> {
@@ -23,7 +23,7 @@ export async function checkViolations(
 
   const [rulesRes, todayTradesRes] = await Promise.all([
     supabase.from('rules').select('id, type, label, threshold, enabled').eq('user_id', userId).eq('enabled', true),
-    supabase.from('trades').select('pnl, status, open_time').eq('user_id', userId).gte('open_time', today.toISOString()),
+    supabase.from('trades').select('pnl_inr, status, opened_at').eq('user_id', userId).gte('opened_at', today.toISOString()),
   ])
 
   const rules = rulesRes.data ?? []
@@ -45,7 +45,7 @@ export async function checkViolations(
     }
 
     if (rule.type === 'max_daily_loss_inr') {
-      const totalLoss = todayTrades.reduce((sum, tr) => sum + (tr.pnl ?? 0), 0)
+      const totalLoss = todayTrades.reduce((sum, tr) => sum + (tr.pnl_inr ?? 0), 0)
       if (totalLoss <= -t.amount) {
         violations.push({
           rule_id: rule.id,
@@ -57,10 +57,10 @@ export async function checkViolations(
     }
 
     if (rule.type === 'min_risk_reward') {
-      const { entryPrice, stopLoss, takeProfit, side } = newTrade
-      if (entryPrice && stopLoss && takeProfit) {
-        const risk = Math.abs(entryPrice - stopLoss)
-        const reward = Math.abs(takeProfit - entryPrice)
+      const { entry_price, stop_loss, take_profit, side } = newTrade
+      if (entry_price && stop_loss && take_profit) {
+        const risk = Math.abs(entry_price - stop_loss)
+        const reward = Math.abs(take_profit - entry_price)
         const rr = risk > 0 ? reward / risk : 0
         if (rr < t.ratio) {
           violations.push({
