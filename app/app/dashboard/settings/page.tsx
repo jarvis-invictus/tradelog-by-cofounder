@@ -10,11 +10,11 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, email, plan_tier, avatar_url')
+    .select('full_name, email, plan, avatar_url')
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.plan_tier === 'pro'
+  const isPro = profile?.plan === 'pro'
 
   return (
     <div className="max-w-xl space-y-8">

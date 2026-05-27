@@ -98,12 +98,12 @@ export default async function DashboardPage() {
                 Link your MetaTrader 5 account to start auto-syncing your trades.
               </p>
               <p className="mt-1 font-mono text-xs text-ink-muted">
-                Project ref: <span className="text-anchor">micjlaxtmjyrjqmsjskt</span>
+                Project ref: <span className="text-anchor">xlspbtqxcxrxspcpwlxx</span>
               </p>
             </div>
           </div>
           <a
-            href="https://app.supabase.com/project/micjlaxtmjyrjqmsjskt"
+            href="https://app.supabase.com/project/xlspbtqxcxrxspcpwlxx"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-10 flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-anchor px-5 text-sm font-medium text-paper transition-all hover:bg-anchor/90 active:scale-[0.99]"
