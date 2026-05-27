@@ -1,20 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { UpdateProfileForm } from '@/components/settings/update-profile-form'
+import { ChangePasswordForm } from '@/components/settings/change-password-form'
+import { DangerZone } from '@/components/settings/danger-zone'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, email, plan, avatar_url')
+    .select('full_name, email, plan, avatar_url, language')
     .eq('id', user.id)
     .single()
 
   const isPro = profile?.plan === 'pro'
+  const isEmailUser = user.app_metadata?.provider === 'email'
 
   return (
     <div className="max-w-xl space-y-8">
@@ -25,18 +29,22 @@ export default async function SettingsPage() {
 
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-anchor">Profile</h2>
-        <div className="card divide-y divide-rule overflow-hidden">
-          {[
-            { label: 'Name', value: profile?.full_name ?? '—' },
-            { label: 'Email', value: user.email ?? '—' },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between px-4 py-3">
-              <p className="text-sm text-ink-muted">{label}</p>
-              <p className="text-sm font-medium text-anchor">{value}</p>
-            </div>
-          ))}
+        <div className="card p-4">
+          <UpdateProfileForm 
+            userId={user.id} 
+            profile={{ full_name: profile?.full_name, language: profile?.language }} 
+          />
         </div>
       </section>
+
+      {isEmailUser && (
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-anchor">Password</h2>
+          <div className="card p-4">
+            <ChangePasswordForm isEmailUser={isEmailUser} />
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-anchor">Subscription</h2>
@@ -62,6 +70,11 @@ export default async function SettingsPage() {
             <p className="mt-2 text-center text-xs text-ink-muted">Pay via UPI, card, or netbanking</p>
           </div>
         )}
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-anchor">Session</h2>
+        <DangerZone />
       </section>
     </div>
   )
