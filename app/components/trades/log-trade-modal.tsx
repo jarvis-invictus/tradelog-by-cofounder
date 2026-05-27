@@ -74,19 +74,19 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
     
     const { data: trade, error: insertError } = await supabase.from('trades').insert({
       user_id: user.id,
-      symbol: form.pair.toUpperCase(),
-      type: form.side,
+      pair: form.pair.toUpperCase(),
+      side: form.side,
       lot_size: lotSize,
-      open_price: entryPrice,
-      close_price: exitPrice,
+      entry_price: entryPrice,
+      exit_price: exitPrice,
       stop_loss: form.stopLoss ? parseFloat(form.stopLoss) : null,
       take_profit: form.takeProfit ? parseFloat(form.takeProfit) : null,
+      pnl_inr: pnlInr,
+      pnl_pips: pnlPips,
       session: form.session || null,
-      open_time: new Date(form.openedAt).toISOString(),
-      close_time: exitPrice ? new Date().toISOString() : null,
-      pnl: pnlInr,
+      opened_at: new Date(form.openedAt).toISOString(),
+      closed_at: exitPrice ? new Date().toISOString() : null,
       notes: form.notes || null,
-      is_manual: true,
       status: exitPrice ? 'closed' : 'open',
     }).select('id').single()
     
