@@ -3,8 +3,9 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { X, TrendingUp, TrendingDown } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { checkViolations, type Violation } from '@/lib/rules/check-violations'
 
 interface LogTradeModalProps {
   isOpen: boolean
@@ -22,6 +23,8 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [violations, setViolations] = useState<Violation[]>([])
+  const [showWarning, setShowWarning] = useState(false)
   
   const [form, setForm] = useState({
     pair: '',
@@ -49,11 +52,7 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
     return { pnlPips, pnlInr }
   }, [form.entryPrice, form.exitPrice, form.lotSize, form.side])
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    
+  async function saveTrade(overrideViolations?: Violation[]) {
     const supabase = createClient()
     
     const entryPrice = parseFloat(form.entryPrice)
@@ -65,41 +64,100 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
       : null
     const pnlInr = pnlPips !== null ? pnlPips * lotSize * 0.75 : null
     
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        setError('Not authenticated')
-        setLoading(false)
-        return
-      }
-      
-      supabase.from('trades').insert({
-        user_id: user.id,
-        symbol: form.pair.toUpperCase(),
-        type: form.side,
-        lot_size: lotSize,
-        open_price: entryPrice,
-        close_price: exitPrice,
-        stop_loss: form.stopLoss ? parseFloat(form.stopLoss) : null,
-        take_profit: form.takeProfit ? parseFloat(form.takeProfit) : null,
-        session: form.session || null,
-        open_time: new Date(form.openedAt).toISOString(),
-        close_time: exitPrice ? new Date().toISOString() : null,
-        pnl: pnlInr,
-        notes: form.notes || null,
-        is_manual: true,
-        status: exitPrice ? 'closed' : 'open',
-      }).then(({ error: insertError }) => {
-        if (insertError) {
-          setError(insertError.message)
-          setLoading(false)
-          return
-        }
-        
-        router.refresh()
-        onClose()
-        setLoading(false)
-      })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setError('Not authenticated')
+      setLoading(false)
+      return
+    }
+    
+    const { data: trade, error: insertError } = await supabase.from('trades').insert({
+      user_id: user.id,
+      symbol: form.pair.toUpperCase(),
+      type: form.side,
+      lot_size: lotSize,
+      open_price: entryPrice,
+      close_price: exitPrice,
+      stop_loss: form.stopLoss ? parseFloat(form.stopLoss) : null,
+      take_profit: form.takeProfit ? parseFloat(form.takeProfit) : null,
+      session: form.session || null,
+      open_time: new Date(form.openedAt).toISOString(),
+      close_time: exitPrice ? new Date().toISOString() : null,
+      pnl: pnlInr,
+      notes: form.notes || null,
+      is_manual: true,
+      status: exitPrice ? 'closed' : 'open',
+    }).select('id').single()
+    
+    if (insertError) {
+      setError(insertError.message)
+      setLoading(false)
+      return
+    }
+    
+    // Record violations if overriding
+    if (overrideViolations && overrideViolations.length > 0 && trade) {
+      await supabase.from('rule_violations').insert(
+        overrideViolations.map(v => ({
+          user_id: user.id,
+          rule_id: v.rule_id,
+          trade_id: trade.id,
+          overridden: true,
+          override_reason: 'User proceeded despite warning',
+          occurred_at: new Date().toISOString(),
+        }))
+      )
+    }
+    
+    router.refresh()
+    onClose()
+    setLoading(false)
+    setShowWarning(false)
+    setViolations([])
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setError('Not authenticated')
+      setLoading(false)
+      return
+    }
+    
+    const entryPrice = parseFloat(form.entryPrice)
+    
+    // Check for violations
+    const violationList = await checkViolations(supabase, user.id, {
+      entryPrice,
+      stopLoss: form.stopLoss ? parseFloat(form.stopLoss) : null,
+      takeProfit: form.takeProfit ? parseFloat(form.takeProfit) : null,
+      side: form.side,
     })
+    
+    if (violationList.length > 0) {
+      setViolations(violationList)
+      setShowWarning(true)
+      setLoading(false)
+      return
+    }
+    
+    // No violations, proceed directly
+    await saveTrade()
+  }
+  
+  function handleCancelWarning() {
+    setShowWarning(false)
+    setViolations([])
+  }
+  
+  function handleProceedAnyway() {
+    setLoading(true)
+    saveTrade(violations)
   }
 
   if (!isOpen) return null
@@ -119,7 +177,9 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
         "bottom-0 left-0 right-0 h-[85vh] rounded-t-2xl md:rounded-none border-t md:border-t-0 border-border"
       )}>
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="font-display text-lg font-medium text-anchor">Log Trade</h2>
+          <h2 className="font-display text-lg font-medium text-anchor">
+            {showWarning ? 'Rule Warning' : 'Log Trade'}
+          </h2>
           <button 
             onClick={onClose}
             className="rounded-lg p-1.5 hover:bg-neutral transition-colors"
@@ -128,7 +188,44 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4 p-4">
+        {showWarning ? (
+          <div className="p-4 space-y-4">
+            {/* Warning Screen */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm mb-3">
+                <AlertTriangle className="h-4 w-4" />
+                You&apos;re about to break {violations.length} rule{violations.length > 1 ? 's' : ''}
+              </div>
+              <div className="space-y-2">
+                {violations.map((v, i) => (
+                  <p key={i} className="text-sm text-amber-700">
+                    • {v.rule_label}: {v.message}
+                  </p>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelWarning}
+                disabled={loading}
+                className="flex-1 border border-border rounded-lg px-4 py-2 text-sm text-ink-muted hover:bg-neutral transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleProceedAnyway}
+                disabled={loading}
+                className="flex-1 bg-amber-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-600 transition-colors"
+              >
+                {loading ? 'Saving...' : 'Log Anyway →'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 p-4">
           {/* Pair */}
           <div>
             <label className="block text-sm font-medium text-anchor mb-1.5">Pair</label>
@@ -318,6 +415,7 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
             {loading ? 'Saving...' : 'Log Trade'}
           </button>
         </form>
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Plug } from 'lucide-react'
+import { Plug, AlertTriangle } from 'lucide-react'
 import { LogTradeButton } from '@/components/trades/log-trade-button'
 import { cn } from '@/lib/utils'
 import { formatShortDate } from '@/lib/utils'
@@ -12,7 +12,10 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileResult, tradesResult, recentTradesResult] = await Promise.all([
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const [profileResult, tradesResult, recentTradesResult, violationsResult] = await Promise.all([
     supabase.from('users').select('full_name').eq('id', user.id).single(),
     supabase.from('trades').select('pnl, status, close_price').eq('user_id', user.id),
     supabase.from('trades')
@@ -20,6 +23,11 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .order('open_time', { ascending: false })
       .limit(5),
+    supabase.from('rule_violations')
+      .select('id, occurred_at, rules(label)')
+      .eq('user_id', user.id)
+      .gte('occurred_at', todayStart.toISOString())
+      .order('occurred_at', { ascending: false }),
   ])
 
   const firstName = profileResult.data?.full_name?.split(' ')[0] ?? 'there'
@@ -34,6 +42,7 @@ export default async function DashboardPage() {
   const netPnl = closedTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0)
 
   const recentTrades = recentTradesResult.data ?? []
+  const todayViolations = violationsResult.data ?? []
 
   const stats = [
     { label: 'Total Trades', display: String(tradeCount), color: 'text-anchor' },
@@ -49,6 +58,22 @@ export default async function DashboardPage() {
           Welcome back, {firstName}
         </h1>
       </div>
+
+      {todayViolations.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1">
+          <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+            <AlertTriangle className="h-4 w-4" />
+            {todayViolations.length} rule{todayViolations.length > 1 ? 's' : ''} broken today
+          </div>
+          <div className="space-y-1">
+            {todayViolations.map((v) => (
+              <p key={v.id} className="text-xs text-amber-700 ml-6">
+                • {(v.rules as any)?.label ?? 'Unknown rule'} at {new Date(v.occurred_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {stats.map(({ label, display, color }) => (
