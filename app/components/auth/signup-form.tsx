@@ -95,7 +95,7 @@ export function SignupForm() {
 
       <p className="text-center text-sm text-ink-muted">
         Already have an account?{' '}
-        <Link href="/auth/login" className="text-anchor underline underline-offset-4 hover:opacity-70">
+        <Link href="/login" className="text-anchor underline underline-offset-4 hover:opacity-70">
           Sign in →
         </Link>
       </p>

@@ -5,10 +5,10 @@ import CompleteClient from './complete-client'
 export default async function CompletePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('profiles')
     .select('language, mt5_connected')
     .eq('id', user.id)
     .single()

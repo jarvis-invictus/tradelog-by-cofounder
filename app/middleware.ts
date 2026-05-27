@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const authRoutes = ['/auth/login', '/auth/signup']
+  const authRoutes = ['/login', '/signup']
   const isAuthRoute = authRoutes.some((r) => pathname.startsWith(r))
   const isDashboard = pathname.startsWith('/dashboard')
   const isOnboarding = pathname.startsWith('/onboarding')
@@ -39,14 +39,14 @@ export async function middleware(request: NextRequest) {
   // 1. No session — protect dashboard and onboarding
   if (!user && (isDashboard || isOnboarding)) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // 2. Has session — check onboarding state for dashboard access
   if (user && isDashboard) {
     const { data: profile } = await supabase
-      .from('users')
+      .from('profiles')
       .select('onboarding_complete')
       .eq('id', user.id)
       .single()
@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
   // 3. Has session + onboarding done — redirect away from auth routes
   if (user && isAuthRoute) {
     const { data: profile } = await supabase
-      .from('users')
+      .from('profiles')
       .select('onboarding_complete')
       .eq('id', user.id)
       .single()
