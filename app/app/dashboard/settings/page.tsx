@@ -9,7 +9,7 @@ export default async function SettingsPage() {
   if (!user) redirect('/auth/login')
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('profiles')
     .select('full_name, email, plan_tier, avatar_url')
     .eq('id', user.id)
     .single()

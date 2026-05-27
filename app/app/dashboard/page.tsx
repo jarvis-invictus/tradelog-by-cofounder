@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   todayStart.setHours(0, 0, 0, 0)
 
   const [profileResult, tradesResult, recentTradesResult, violationsResult] = await Promise.all([
-    supabase.from('users').select('full_name').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     supabase.from('trades').select('pnl, status, close_price').eq('user_id', user.id),
     supabase.from('trades')
       .select('id, symbol, type, open_price, close_price, pnl, open_time, status')

@@ -21,7 +21,7 @@ export default function Mt5ConnectPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { error: dbError } = await supabase
-        .from('users')
+        .from('profiles')
         .update({ mt5_account_id: accountId.trim(), mt5_connected: true })
         .eq('id', user.id)
       if (dbError) {

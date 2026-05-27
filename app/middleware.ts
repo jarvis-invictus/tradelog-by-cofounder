@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
   // 2. Has session — check onboarding state for dashboard access
   if (user && isDashboard) {
     const { data: profile } = await supabase
-      .from('users')
+      .from('profiles')
       .select('onboarding_complete')
       .eq('id', user.id)
       .single()
@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
   // 3. Has session + onboarding done — redirect away from auth routes
   if (user && isAuthRoute) {
     const { data: profile } = await supabase
-      .from('users')
+      .from('profiles')
       .select('onboarding_complete')
       .eq('id', user.id)
       .single()
@@ -72,7 +72,7 @@ export async function middleware(request: NextRequest) {
   // 4. Has session but incomplete onboarding — redirect to onboarding
   if (user && !isAuthRoute && !isOnboarding) {
     const { data: profile } = await supabase
-      .from('users')
+      .from('profiles')
       .select('onboarding_complete')
       .eq('id', user.id)
       .single()
