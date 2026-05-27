@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --color-anchor: #121F29;
+    --color-sage: #A7C5B0;
+    --color-lavender: #C9B4F2;
+    --color-sand: #FFD9A6;
+    --color-mint: #E6F5EE;
+    --color-neutral: #F3F5F4;
+    --color-paper: #FBFBF9;
+    --color-ink-muted: #5A6B73;
+    --color-rule: #E3E6E4;
+    --color-pnl-up: #6FA77E;
+    --color-pnl-down: #C2585A;
+  }
+
+  * {
+    @apply border-rule;
+  }
+
+  body {
+    @apply bg-paper text-anchor font-sans antialiased;
+    font-feature-settings: "ss01" on, "cv01" on;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.01em;
+  }
+
+  .font-mono {
+    font-feature-settings: "tnum" on, "lnum" on;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-anchor px-5 py-2.5 text-sm font-medium text-paper transition-all duration-150 hover:-translate-y-px hover:bg-anchor/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender/60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-lavender px-5 py-2.5 text-sm font-medium text-anchor transition-all duration-150 hover:-translate-y-px hover:bg-lavender/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender/60;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-rule bg-paper px-5 py-2.5 text-sm font-medium text-anchor transition-all duration-150 hover:-translate-y-px hover:border-anchor/30 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender/60;
+  }
+
+  .card {
+    @apply rounded-xl border border-rule bg-white shadow-sm;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-widest text-ink-muted;
+  }
+
+  .pnl-positive {
+    @apply font-mono text-pnl-up;
+  }
+
+  .pnl-negative {
+    @apply font-mono text-pnl-down;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-rule bg-white px-3 py-2 text-sm text-anchor placeholder:text-ink-muted focus:border-anchor focus:outline-none focus:ring-2 focus:ring-lavender/60 transition-all duration-100;
+  }
+}
