@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   BarChart2,
+  BookOpen,
   ShieldCheck,
   Sparkles,
   Settings,
@@ -16,6 +17,7 @@ import { createClient } from '@/lib/supabase/client'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/dashboard/trades', label: 'Trades', icon: BarChart2, exact: false },
+  { href: '/dashboard/journal', label: 'Journal', icon: BookOpen, exact: false },
   { href: '/dashboard/rules', label: 'Rules', icon: ShieldCheck, exact: false },
   { href: '/dashboard/insights', label: 'Insights', icon: Sparkles, exact: false },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings, exact: false },
@@ -32,7 +34,7 @@ export function Sidebar({ plan = 'free' }: SidebarProps) {
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    router.push('/login')
     router.refresh()
   }
 
