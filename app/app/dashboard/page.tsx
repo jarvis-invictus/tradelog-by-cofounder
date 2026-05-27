@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   if (!user) redirect('/auth/login')
 
   const [profileResult, countResult] = await Promise.all([
-    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    supabase.from('users').select('full_name').eq('id', user.id).single(),
     supabase.from('trades').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 

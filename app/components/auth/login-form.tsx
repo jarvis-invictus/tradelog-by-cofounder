@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 
 export function LoginForm() {
   const router = useRouter()
@@ -60,14 +59,18 @@ export function LoginForm() {
         <p className="rounded-lg bg-danger-surface px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
-      <Button type="submit" variant="primary" loading={loading} className="w-full">
-        Sign in
-      </Button>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full rounded-lg bg-anchor py-2.5 text-sm font-medium text-paper transition hover:opacity-90 disabled:opacity-60"
+      >
+        {loading ? 'Signing in…' : 'Sign in'}
+      </button>
 
       <p className="text-center text-sm text-ink-muted">
-        No account?{' '}
+        Don&apos;t have an account?{' '}
         <Link href="/auth/signup" className="text-anchor underline underline-offset-4 hover:opacity-70">
-          Create one free
+          Sign up →
         </Link>
       </p>
     </form>

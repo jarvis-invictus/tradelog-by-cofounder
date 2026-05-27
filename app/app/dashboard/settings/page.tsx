@@ -9,12 +9,12 @@ export default async function SettingsPage() {
   if (!user) redirect('/auth/login')
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, email, plan, avatar_url')
+    .from('users')
+    .select('full_name, email, plan_tier, avatar_url')
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.plan === 'pro'
+  const isPro = profile?.plan_tier === 'pro'
 
   return (
     <div className="max-w-xl space-y-8">
