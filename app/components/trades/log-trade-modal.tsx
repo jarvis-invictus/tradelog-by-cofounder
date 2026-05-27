@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { X, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkViolations, type Violation } from '@/lib/rules/check-violations'
+import { generateInsightsAction } from '@/app/actions/generate-insights-action'
 
 interface LogTradeModalProps {
   isOpen: boolean
@@ -107,6 +108,11 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
           occurred_at: new Date().toISOString(),
         }))
       )
+    }
+    
+    // Trigger insights generation for closed trades
+    if (exitPrice) {
+      await generateInsightsAction()
     }
     
     router.refresh()
