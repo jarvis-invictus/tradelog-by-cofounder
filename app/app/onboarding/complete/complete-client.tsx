@@ -25,7 +25,7 @@ export default function CompleteClient({ language, mt5Connected, rulesCount }: P
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('profiles').update({ onboarding_complete: true }).eq('id', user.id)
+      await supabase.from('users').update({ onboarding_complete: true }).eq('id', user.id)
     }
     router.push('/dashboard')
   }

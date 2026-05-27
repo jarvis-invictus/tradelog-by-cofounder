@@ -20,7 +20,7 @@ export default function LanguagePage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('profiles').update({ language: selected }).eq('id', user.id)
+      await supabase.from('users').update({ language: selected }).eq('id', user.id)
     }
     router.push('/onboarding/mt5-connect')
   }

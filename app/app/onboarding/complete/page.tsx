@@ -8,7 +8,7 @@ export default async function CompletePage() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('users')
     .select('language, mt5_connected')
     .eq('id', user.id)
     .single()
