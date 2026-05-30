@@ -20,6 +20,53 @@ const SESSIONS = [
   { value: 'overlap', label: 'Overlap' },
 ]
 
+const INSTRUMENT_TYPES = [
+  { value: 'forex_standard', label: 'Forex (standard pair)', example: 'EURUSD, GBPUSD' },
+  { value: 'forex_jpy', label: 'Forex (JPY pair)', example: 'USDJPY, EURJPY' },
+  { value: 'xauusd', label: 'Gold (XAUUSD)', example: 'XAUUSD' },
+  { value: 'xagusd', label: 'Silver (XAGUSD)', example: 'XAGUSD' },
+  { value: 'indices', label: 'Indices / US30 / NAS100', example: 'US30, NAS100' },
+]
+
+function calcPnl(instrumentType: string, side: string, entry: number, exit: number, lotSize: number) {
+  let pnlPips = 0
+  let pnlInr = 0
+  const USD_TO_INR = 84 // approximate, good enough for display
+
+  switch (instrumentType) {
+    case 'forex_standard':
+      // 1 pip = 0.0001, pip value = lot * 10 USD
+      pnlPips = side === 'buy' ? (exit - entry) * 10000 : (entry - exit) * 10000
+      pnlInr = pnlPips * lotSize * 10 * USD_TO_INR / 100 // per pip per lot * lots * INR
+      break
+    case 'forex_jpy':
+      // 1 pip = 0.01 for JPY pairs
+      pnlPips = side === 'buy' ? (exit - entry) * 100 : (entry - exit) * 100
+      pnlInr = pnlPips * lotSize * 10 * USD_TO_INR / 100
+      break
+    case 'xauusd':
+      // Gold: 1 pip = $0.01, contract size = 100 oz
+      pnlPips = side === 'buy' ? (exit - entry) * 100 : (entry - exit) * 100
+      pnlInr = (side === 'buy' ? exit - entry : entry - exit) * lotSize * 100 * USD_TO_INR
+      break
+    case 'xagusd':
+      // Silver: contract size = 5000 oz
+      pnlPips = side === 'buy' ? (exit - entry) * 100 : (entry - exit) * 100
+      pnlInr = (side === 'buy' ? exit - entry : entry - exit) * lotSize * 5000 * USD_TO_INR
+      break
+    case 'indices':
+      // Indices: 1 point = $1 per lot (varies, use $1 as base)
+      pnlPips = side === 'buy' ? exit - entry : entry - exit
+      pnlInr = pnlPips * lotSize * USD_TO_INR
+      break
+    default:
+      pnlPips = side === 'buy' ? (exit - entry) * 10000 : (entry - exit) * 10000
+      pnlInr = pnlPips * lotSize * 10 * USD_TO_INR / 100
+  }
+
+  return { pnlPips, pnlInr }
+}
+
 export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -30,6 +77,7 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
   const [form, setForm] = useState({
     pair: '',
     side: 'buy' as 'buy' | 'sell',
+    instrumentType: 'forex_standard',
     lotSize: '',
     entryPrice: '',
     exitPrice: '',
@@ -47,11 +95,8 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
     
     if (!entry || !exit || !lot || !form.exitPrice) return null
     
-    const pnlPips = form.side === 'buy' ? (exit - entry) * 10000 : (entry - exit) * 10000
-    const pnlInr = pnlPips * lot * 0.75
-    
-    return { pnlPips, pnlInr }
-  }, [form.entryPrice, form.exitPrice, form.lotSize, form.side])
+    return calcPnl(form.instrumentType, form.side, entry, exit, lot)
+  }, [form.instrumentType, form.entryPrice, form.exitPrice, form.lotSize, form.side])
 
   async function saveTrade(overrideViolations?: Violation[]) {
     const supabase = createClient()
@@ -60,10 +105,13 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
     const exitPrice = form.exitPrice ? parseFloat(form.exitPrice) : null
     const lotSize = parseFloat(form.lotSize)
     
-    const pnlPips = exitPrice 
-      ? (form.side === 'buy' ? (exitPrice - entryPrice) * 10000 : (entryPrice - exitPrice) * 10000)
-      : null
-    const pnlInr = pnlPips !== null ? pnlPips * lotSize * 0.75 : null
+    let pnlPips = null
+    let pnlInr = null
+    if (exitPrice) {
+      const result = calcPnl(form.instrumentType, form.side, entryPrice, exitPrice, lotSize)
+      pnlPips = result.pnlPips
+      pnlInr = result.pnlInr
+    }
     
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -232,6 +280,20 @@ export function LogTradeModal({ isOpen, onClose }: LogTradeModalProps) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 p-4">
+          {/* Instrument Type */}
+          <div>
+            <label className="block text-sm font-medium text-anchor mb-1.5">Instrument type</label>
+            <select
+              value={form.instrumentType}
+              onChange={(e) => setForm({ ...form, instrumentType: e.target.value })}
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-anchor focus:border-anchor focus:outline-none focus:ring-2 focus:ring-lavender/60"
+            >
+              {INSTRUMENT_TYPES.map((i) => (
+                <option key={i.value} value={i.value}>{i.label} — {i.example}</option>
+              ))}
+            </select>
+          </div>
+          
           {/* Pair */}
           <div>
             <label className="block text-sm font-medium text-anchor mb-1.5">Pair</label>

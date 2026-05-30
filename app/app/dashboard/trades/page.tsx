@@ -18,9 +18,9 @@ export default async function TradesPage({
 
   const { data: trades } = await supabase
     .from('trades')
-    .select('id, symbol, type, lot_size, open_price, close_price, open_time, close_time, pnl, is_manual, tags, status')
+    .select('id, pair, side, lot_size, entry_price, exit_price, opened_at, closed_at, pnl_inr, is_manual, tags, status, session')
     .eq('user_id', user.id)
-    .order('open_time', { ascending: false })
+    .order('opened_at', { ascending: false })
 
   const filter = searchParams.filter || 'all'
 
@@ -62,33 +62,33 @@ export default async function TradesPage({
                 <tbody className="divide-y divide-rule">
                   {trades.map((trade) => (
                     <tr key={trade.id} className="hover:bg-neutral/40 transition-colors">
-                      <td className="px-4 py-3 font-mono font-medium text-anchor">{trade.symbol}</td>
+                      <td className="px-4 py-3 font-mono font-medium text-anchor">{trade.pair}</td>
                       <td className="px-4 py-3">
                         <span className={cn(
                           'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase',
-                          trade.type === 'buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                          trade.side === 'buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
                         )}>
-                          {trade.type}
+                          {trade.side}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-mono text-ink-muted">{trade.open_price?.toFixed(5) ?? '—'}</td>
-                      <td className="px-4 py-3 font-mono text-ink-muted">{trade.close_price?.toFixed(5) ?? '—'}</td>
+                      <td className="px-4 py-3 font-mono text-ink-muted">{trade.entry_price?.toFixed(5) ?? '—'}</td>
+                      <td className="px-4 py-3 font-mono text-ink-muted">{trade.exit_price?.toFixed(5) ?? '—'}</td>
                       <td className={cn(
                         'px-4 py-3 text-right font-mono font-semibold',
-                        (trade.pnl ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                        (trade.pnl_inr ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
                       )}>
-                        {(trade.pnl ?? 0) >= 0 ? '+' : ''}₹{Math.abs(trade.pnl ?? 0).toFixed(2)}
+                        {(trade.pnl_inr ?? 0) >= 0 ? '+' : ''}₹{Math.abs(trade.pnl_inr ?? 0).toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-ink-muted capitalize">{trade.tags?.[0] ?? '—'}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">{trade.open_time ? formatShortDate(trade.open_time) : '—'}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-ink-muted capitalize">{trade.session ?? '—'}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">{trade.opened_at ? formatShortDate(trade.opened_at) : '—'}</td>
                       <td className="px-4 py-3">
                         <span className={cn(
                           'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase',
-                          trade.status === 'open' || !trade.close_price
+                          trade.status === 'open' || !trade.exit_price
                             ? 'bg-amber-50 text-amber-600'
                             : 'bg-emerald-50 text-emerald-600'
                         )}>
-                          {trade.status === 'open' || !trade.close_price ? 'Open' : 'Closed'}
+                          {trade.status === 'open' || !trade.exit_price ? 'Open' : 'Closed'}
                         </span>
                       </td>
                     </tr>
@@ -103,36 +103,36 @@ export default async function TradesPage({
                 <div key={trade.id} className="px-4 py-4 hover:bg-neutral/40 transition-colors">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-medium text-anchor">{trade.symbol}</span>
+                      <span className="font-mono text-sm font-medium text-anchor">{trade.pair}</span>
                       <span className={cn(
                         'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase',
-                        trade.type === 'buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                        trade.side === 'buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
                       )}>
-                        {trade.type}
+                        {trade.side}
                       </span>
                     </div>
                     <span className={cn(
                       'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase',
-                      trade.status === 'open' || !trade.close_price
+                      trade.status === 'open' || !trade.exit_price
                         ? 'bg-amber-50 text-amber-600'
                         : 'bg-emerald-50 text-emerald-600'
                     )}>
-                      {trade.status === 'open' || !trade.close_price ? 'Open' : 'Closed'}
+                      {trade.status === 'open' || !trade.exit_price ? 'Open' : 'Closed'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <div className="font-mono text-ink-muted">
-                      {trade.open_price?.toFixed(5) ?? '—'} → {trade.close_price?.toFixed(5) ?? 'Open'}
+                      {trade.entry_price?.toFixed(5) ?? '—'} → {trade.exit_price?.toFixed(5) ?? 'Open'}
                     </div>
                     <div className={cn(
                       'font-mono font-semibold',
-                      (trade.pnl ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                      (trade.pnl_inr ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
                     )}>
-                      {(trade.pnl ?? 0) >= 0 ? '+' : ''}₹{Math.abs(trade.pnl ?? 0).toFixed(2)}
+                      {(trade.pnl_inr ?? 0) >= 0 ? '+' : ''}₹{Math.abs(trade.pnl_inr ?? 0).toFixed(2)}
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-ink-muted">
-                    {trade.open_time ? formatShortDate(trade.open_time) : '—'}
+                    {trade.opened_at ? formatShortDate(trade.opened_at) : '—'}
                   </div>
                 </div>
               ))}
