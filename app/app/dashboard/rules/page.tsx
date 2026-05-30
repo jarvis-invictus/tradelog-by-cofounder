@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatShortDate, cn } from '@/lib/utils'
 import { RuleToggle } from './rule-toggle'
+import { AddRuleButton } from '@/components/rules/add-rule-button'
 
 export default async function RulesPage() {
   const supabase = await createClient()
@@ -30,7 +31,7 @@ export default async function RulesPage() {
           <p className="eyebrow mb-1">Rules</p>
           <h1 className="font-display text-2xl font-medium text-anchor">Discipline rules</h1>
         </div>
-        <button type="button" className="btn-primary">+ Add rule</button>
+        <AddRuleButton />
       </div>
 
       {rules.length === 0 ? (

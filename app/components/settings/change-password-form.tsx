@@ -8,8 +8,6 @@ interface ChangePasswordFormProps {
 }
 
 export function ChangePasswordForm({ isEmailUser }: ChangePasswordFormProps) {
-  if (!isEmailUser) return null
-
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,6 +16,8 @@ export function ChangePasswordForm({ isEmailUser }: ChangePasswordFormProps) {
     password: '',
     confirm: '',
   })
+
+  if (!isEmailUser) return null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
