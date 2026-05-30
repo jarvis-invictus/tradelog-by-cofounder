@@ -17,11 +17,11 @@ export default async function DashboardPage() {
 
   const [profileResult, tradesResult, recentTradesResult, violationsResult] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
-    supabase.from('trades').select('pnl, status, close_price').eq('user_id', user.id),
+    supabase.from('trades').select('pnl_inr, status, exit_price').eq('user_id', user.id),
     supabase.from('trades')
-      .select('id, symbol, type, open_price, close_price, pnl, open_time, status')
+      .select('id, pair, side, entry_price, exit_price, pnl_inr, opened_at, status')
       .eq('user_id', user.id)
-      .order('open_time', { ascending: false })
+      .order('opened_at', { ascending: false })
       .limit(5),
     supabase.from('rule_violations')
       .select('id, occurred_at, rules(label)')
@@ -32,14 +32,14 @@ export default async function DashboardPage() {
 
   const firstName = profileResult.data?.full_name?.split(' ')[0] ?? 'there'
   const trades = tradesResult.data ?? []
-  const closedTrades = trades.filter(t => t.status === 'closed' || t.close_price != null)
+  const closedTrades = trades.filter(t => t.status === 'closed' || t.exit_price != null)
   const tradeCount = trades.length
   const hasTrades = tradeCount > 0
 
   // Calculate win rate and net P&L
-  const winningTrades = closedTrades.filter(t => (t.pnl ?? 0) > 0)
+  const winningTrades = closedTrades.filter(t => (t.pnl_inr ?? 0) > 0)
   const winRate = closedTrades.length > 0 ? Math.round((winningTrades.length / closedTrades.length) * 100) : 0
-  const netPnl = closedTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0)
+  const netPnl = closedTrades.reduce((sum, t) => sum + (t.pnl_inr ?? 0), 0)
 
   const recentTrades = recentTradesResult.data ?? []
   const todayViolations = violationsResult.data ?? []
@@ -129,22 +129,22 @@ export default async function DashboardPage() {
             {recentTrades.map((trade) => (
               <div key={trade.id} className="flex items-center justify-between px-4 py-3 hover:bg-neutral/40 transition-colors">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm font-medium text-anchor">{trade.symbol}</span>
+                  <span className="font-mono text-sm font-medium text-anchor">{trade.pair}</span>
                   <span className={cn(
                     'rounded-full px-2 py-0.5 font-mono text-[10px] uppercase',
-                    trade.type === 'buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                    trade.side === 'buy' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
                   )}>
-                    {trade.type}
+                    {trade.side}
                   </span>
                 </div>
                 <div className="text-right">
                   <p className={cn(
                     'font-mono text-sm font-semibold',
-                    (trade.pnl ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                    (trade.pnl_inr ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-500'
                   )}>
-                    {(trade.pnl ?? 0) >= 0 ? '+' : ''}₹{Math.abs(trade.pnl ?? 0).toFixed(2)}
+                    {(trade.pnl_inr ?? 0) >= 0 ? '+' : ''}₹{Math.abs(trade.pnl_inr ?? 0).toFixed(2)}
                   </p>
-                  <p className="text-xs text-ink-muted">{trade.open_time ? formatShortDate(trade.open_time) : '—'}</p>
+                  <p className="text-xs text-ink-muted">{trade.opened_at ? formatShortDate(trade.opened_at) : '—'}</p>
                 </div>
               </div>
             ))}
